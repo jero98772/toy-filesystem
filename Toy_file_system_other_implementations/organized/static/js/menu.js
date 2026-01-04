@@ -1,4 +1,4 @@
-        const { useState, useEffect } = React;
+const { useState, useEffect } = React;
 
 function Menu() {
     const [filesystems, setFilesystems] = useState([]);
