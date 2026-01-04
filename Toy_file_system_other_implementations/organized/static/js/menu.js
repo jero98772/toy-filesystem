@@ -1,11 +1,11 @@
-const { useState, useEffect } = React;
+        const { useState, useEffect } = React;
 
 function Menu() {
     const [filesystems, setFilesystems] = useState([]);
     const [selectedFS, setSelectedFS] = useState('');
     const [showCreateModal, setShowCreateModal] = useState(false);
     const [newFSName, setNewFSName] = useState('');
-    const [newFSSize, setNewFSSize] = useState(4);
+    const [newFSSize, setNewFSSize] = useState();
 
     useEffect(() => {
         loadFilesystems();
@@ -65,7 +65,7 @@ function Menu() {
             if (result.error) {
                 alert('Error: ' + result.error);
             } else {
-                window.location.href = `/${selectedFS}`;
+                window.location.href = `filesystem/${selectedFS}/info`;
             }
         } catch (error) {
             alert('Error opening filesystem: ' + error.message);

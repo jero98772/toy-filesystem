@@ -7,10 +7,13 @@ function FileSystem() {
     const [rawBytes, setRawBytes] = useState('');
     const [selectedFile, setSelectedFile] = useState(null);
     const terminalEndRef = useRef(null);
-    const filesystemName = window.location.pathname.substring(1);
+    const filesystemName = window.location.pathname.split('/').filter(Boolean)[1];
+
     
     useEffect(() => {
+        mountFilesystem();
         loadTree();
+        loadRawBytes();
         addOutput('Filesystem mounted successfully. Type "help" for available commands.', 'success');
     }, []);
     
@@ -21,18 +24,25 @@ function FileSystem() {
     const addOutput = (text, type = 'info') => {
         setTerminalOutput(prev => [...prev, { text, type, timestamp: Date.now() }]);
     };
-    
+    const mountFilesystem = async () => {
+        await fetch(`/mount/${filesystemName}`, {
+            method: 'POST'
+        });
+    };
     const loadTree = async (path = '/') => {
         const response = await fetch(`/filesystem/${filesystemName}/tree?path=${encodeURIComponent(path)}`);
         const data = await response.json();
-        setTreeData(data.output || data.tree || 'Empty');
+        
+        const tree = data.output || data.tree;
+        const formatted = Array.isArray(tree) ? tree.join('\n') : tree;
+        
+        setTreeData(formatted || 'Empty');
     };
     
-    const loadRawBytes = async (path) => {
+    const loadRawBytes = async () => {
         const response = await fetch(`/filesystem/${filesystemName}/raw_content`);
-        const data = await response.json();
-        const content = data.content || data.output || '';
-        setRawBytes(content);
+        const data = await response.text();
+        setRawBytes(data);
     };
     
     const executeCommand = async (cmd) => {
@@ -152,9 +162,22 @@ function FileSystem() {
                 return;
         }
         
-        const output = data.output || data.content || JSON.stringify(data, null, 2);
+        let output;
+        if (data.tree !== undefined) {
+            // tree command
+            output = Array.isArray(data.tree) ? data.tree.join('\n') : JSON.stringify(data.tree, null, 2);
+        } else if (data.entries !== undefined) {
+            // ls command
+            output = data.entries.length > 0 ? data.entries.join('\n') : 'Empty directory';
+        } else if (data.message) {
+            // Success messages
+            output = data.message;
+        } else {
+            // Everything else
+            output = data.output || data.content || JSON.stringify(data, null, 2);
+        }
         addOutput(output, 'success');
-    };
+        };
     
     const handleSubmit = (e) => {
         e.preventDefault();

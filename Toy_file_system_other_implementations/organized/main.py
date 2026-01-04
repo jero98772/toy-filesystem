@@ -20,8 +20,6 @@ templates = Jinja2Templates(directory="templates")
 UPLOAD_DIR = Path("uploads")
 UPLOAD_DIR.mkdir(exist_ok=True)
 
-app = FastAPI()
-
 filesystems = {}
 
 @app.get("/", response_class=HTMLResponse)
