@@ -55,7 +55,6 @@ function FileSystem() {
         if (command === 'help') {
             addOutput('Available commands:', 'info');
             addOutput('  ls [path]       - List directory contents', 'info');
-            addOutput('  cd <path>       - Change directory', 'info');
             addOutput('  cat <file>      - Read file content', 'info');
             addOutput('  mkdir <path>    - Create directory', 'info');
             addOutput('  touch <file>    - Create empty file', 'info');
@@ -84,17 +83,6 @@ function FileSystem() {
             return;
         }
         
-        if (command === 'cd') {
-            if (args.length === 0) {
-                setCurrentPath('/');
-                addOutput('Changed to /', 'success');
-            } else {
-                const newPath = args[0].startsWith('/') ? args[0] : `${currentPath}/${args[0]}`.replace(/\/+/g, '/');
-                setCurrentPath(newPath);
-                addOutput(`Changed to ${newPath}`, 'success');
-            }
-            return;
-        }
         
         let response, data;
         const targetPath = args[0]?.startsWith('/') ? args[0] : `${currentPath}/${args[0]}`.replace(/\/+/g, '/');
