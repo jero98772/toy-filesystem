@@ -1,23 +1,43 @@
 from fastapi import FastAPI, UploadFile, File, HTTPException, Request, Form
-from fastapi.responses import HTMLResponse, RedirectResponse, JSONResponse, FileResponse
+from fastapi.responses import HTMLResponse, RedirectResponse, JSONResponse, FileResponse, Response
+
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from pathlib import Path
 import shutil
 
-from shell import create_filesystem, open_filesystem, execute_command
+from tools.shell import create_filesystem, open_filesystem, execute_command
+from tools.tools import read_bin_file
 
+from pathlib import Path
+import shutil
+
+current_dir = Path(__file__).parent
+
+app = FastAPI()
+app.mount("/static", StaticFiles(directory=current_dir/"static"), name="static")
+templates = Jinja2Templates(directory="templates")
 UPLOAD_DIR = Path("uploads")
 UPLOAD_DIR.mkdir(exist_ok=True)
 
 app = FastAPI()
 
-# Store active filesystem sessions
 filesystems = {}
-
 
 @app.get("/", response_class=HTMLResponse)
 async def menu(request: Request):
+    return templates.TemplateResponse("menu.html", {
+        "request": request
+    })
+
+@app.get("/filesystem/{filename}/info", response_class=HTMLResponse)
+async def index(request: Request):
+    return templates.TemplateResponse("index.html", {
+        "request": request
+    })
+ 
+@app.get("/list_files", response_class=HTMLResponse)
+async def list_files(request: Request):
     """List all available filesystem images"""
     files = list(UPLOAD_DIR.glob("*.img"))
     filenames = [f.name for f in files]
@@ -25,7 +45,6 @@ async def menu(request: Request):
         "filesystems": filenames,
         "upload_dir": str(UPLOAD_DIR)
     })
-
 
 @app.post("/create")
 async def create_fs(filename: str = Form(...), size_mb: int = Form(...)):
@@ -61,7 +80,7 @@ async def unmount_fs(filename: str):
     return {"error": "Filesystem not mounted"}
 
 
-@app.get("/{filename}/ls")
+@app.get("/filesystem/{filename}/ls")
 async def ls(filename: str, path: str = "/"):
     """List directory contents"""
     if filename not in filesystems:
@@ -72,7 +91,7 @@ async def ls(filename: str, path: str = "/"):
     return result
 
 
-@app.get("/{filename}/tree")
+@app.get("/filesystem/{filename}/tree")
 async def tree(filename: str, path: str = "/"):
     """Show directory tree"""
     if filename not in filesystems:
@@ -83,18 +102,19 @@ async def tree(filename: str, path: str = "/"):
     return result
 
 
-@app.post("/{filename}/mkdir")
+@app.post("/filesystem/{filename}/mkdir")
 async def mkdir(filename: str, path: str = Form(...)):
     """Create a directory"""
     if filename not in filesystems:
         return {"error": "Filesystem not mounted"}
     
     fs = filesystems[filename]
+    print(path)
     result = execute_command(fs, "mkdir", [path])
     return result
 
 
-@app.post("/{filename}/touch")
+@app.post("/filesystem/{filename}/touch")
 async def touch(filename: str, path: str = Form(...)):
     """Create an empty file"""
     if filename not in filesystems:
@@ -105,7 +125,7 @@ async def touch(filename: str, path: str = Form(...)):
     return result
 
 
-@app.post("/{filename}/write")
+@app.post("/filesystem/{filename}/write")
 async def write(filename: str, path: str = Form(...), content: str = Form(...)):
     """Write content to a file"""
     if filename not in filesystems:
@@ -116,7 +136,7 @@ async def write(filename: str, path: str = Form(...), content: str = Form(...)):
     return result
 
 
-@app.get("/{filename}/read")
+@app.get("/filesystem/{filename}/read")
 async def read(filename: str, path: str):
     """Read file content"""
     if filename not in filesystems:
@@ -127,7 +147,7 @@ async def read(filename: str, path: str):
     return result
 
 
-@app.delete("/{filename}/rm")
+@app.delete("/filesystem/{filename}/rm")
 async def rm(filename: str, path: str):
     """Delete a file"""
     if filename not in filesystems:
@@ -138,7 +158,7 @@ async def rm(filename: str, path: str):
     return result
 
 
-@app.get("/{filename}/info")
+@app.get("/filesystem/{filename}/info")
 async def info(filename: str, path: str):
     """Get file information"""
     if filename not in filesystems:
@@ -149,7 +169,7 @@ async def info(filename: str, path: str):
     return result
 
 
-@app.get("/{filename}/stats")
+@app.get("/filesystem/{filename}/stats")
 async def stats(filename: str):
     """Get filesystem statistics"""
     if filename not in filesystems:
@@ -159,8 +179,13 @@ async def stats(filename: str):
     result = execute_command(fs, "stats")
     return result
 
+@app.get("/filesystem/{filename}/raw_content")
+async def raw_content(filename: str):
+    content = read_bin_file(f"{UPLOAD_DIR}/{filename}")
+    return Response(content=str(content))
 
-@app.get("/{filename}/download")
+
+@app.get("/filesystem/{filename}/download")
 async def download_file(filename: str):
     """Download the filesystem image"""
     file_path = UPLOAD_DIR / filename
@@ -187,7 +212,7 @@ async def upload_file(file: UploadFile = File(...)):
     }
 
 
-@app.delete("/{filename}/delete")
+@app.delete("/filesystem/{filename}/delete")
 async def delete_filesystem(filename: str):
     """Delete a filesystem image from disk"""
     if filename in filesystems:

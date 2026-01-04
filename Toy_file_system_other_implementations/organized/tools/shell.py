@@ -8,7 +8,7 @@ from tools.filesystem import FileSystem, FileType
 
 def shell():
     """Interactive filesystem shell"""
-    print("Toy File System Shell")
+    print("File System Shell")
     print("=" * 50)
     
     # Get filesystem path and action
@@ -145,14 +145,14 @@ def shell():
 
 def create_filesystem(img_path, size_mb):
     """Create a new filesystem and return success status"""
-    fs = ToyFileSystem.create(img_path, size_mb)
+    fs = FileSystem.create(img_path, size_mb)
     fs.close()
     return {"status": "success", "message": f"Filesystem created at {img_path}"}
 
 
 def open_filesystem(img_path):
     """Open an existing filesystem"""
-    fs = ToyFileSystem.open(img_path)
+    fs = FileSystem.open(img_path)
     return fs
 
 

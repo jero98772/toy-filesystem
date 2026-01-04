@@ -6,11 +6,11 @@ File System - Main filesystem implementation
 import struct
 import time
 
-from block_device import BlockDevice, BLOCK_SIZE
-from block_allocator import BlockAllocator
-from inode import Inode, FileType, INODE_SIZE, DIRECT_BLOCKS
-from directory import DirEntry
-from superblock import Superblock
+from tools.block_device import BlockDevice, BLOCK_SIZE
+from tools.block_allocator import BlockAllocator
+from tools.inode import Inode, FileType, INODE_SIZE, DIRECT_BLOCKS
+from tools.directory import DirEntry
+from tools.superblock import Superblock
 
 
 class FileInfo:
@@ -378,11 +378,21 @@ class FileSystem:
             used_inodes=len(self.inode_table)
         )
     
-    def tree(self, path="/", prefix="", is_last=True):
+    def tree(self, path="/", prefix="", is_last=True, visited=None):
         """Display directory tree structure"""
+        if visited is None:
+            visited = set()
+        
         inode_num = self._find_inode(path)
         if inode_num is None:
             return []
+        
+        # Cycle detection
+        if inode_num in visited:
+            connector = "└── " if is_last else "├── "
+            return [prefix + connector + "⚠️  [CYCLE DETECTED]"]
+        
+        visited.add(inode_num)
         
         inode = self.inode_table.get(inode_num)
         if inode is None:
@@ -396,12 +406,19 @@ class FileSystem:
         else:
             name = path.split('/')[-1]
         
-        # Add current directory/file
+        # Add current directory/file with icon
         if prefix == "":
-            lines.append(name)
+            # Root level - no indentation
+            if inode.file_type == FileType.DIRECTORY:
+                lines.append("📁 " + name)
+            else:
+                lines.append("📄 " + name)
         else:
             connector = "└── " if is_last else "├── "
-            lines.append(prefix + connector + name)
+            if inode.file_type == FileType.DIRECTORY:
+                lines.append(prefix + connector + "📁 " + name)
+            else:
+                lines.append(prefix + connector + "📄 " + name)
         
         # If it's a directory, process children
         if inode.file_type == FileType.DIRECTORY:
@@ -416,15 +433,14 @@ class FileSystem:
                 else:
                     child_path = path + "/" + entry
                 
-                # Build new prefix
+                # Build new prefix with TAB for proper indentation
                 if prefix == "":
-                    new_prefix = ""
+                    new_prefix = "\t"
                 else:
-                    extension = "    " if is_last else "│   "
-                    new_prefix = prefix + extension
+                    new_prefix = prefix + "\t"
                 
-                # Recursively get subtree
-                child_lines = self.tree(child_path, new_prefix, is_last_entry)
+                # Recursively get subtree with visited tracking
+                child_lines = self.tree(child_path, new_prefix, is_last_entry, visited.copy())
                 lines.extend(child_lines)
         
         return lines
