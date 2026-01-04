@@ -1,0 +1,5 @@
+codex from dna to binary
+
+best way to make binary convertions, i mean the best equivalent from AGCT to 01 
+
+ensure the natural mutability will not break the file system (check how qrs works)
