@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 """
 Directory Entry - Represents directory entries
 """

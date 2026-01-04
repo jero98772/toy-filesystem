@@ -3,7 +3,7 @@
 Interactive shell for the File System
 """
 
-from filesystem import FileSystem, FileType
+from tools.filesystem import FileSystem, FileType
 
 
 def shell():
@@ -143,6 +143,109 @@ def shell():
     fs.close()
     print("\nFilesystem closed. Goodbye!")
 
+def create_filesystem(img_path, size_mb):
+    """Create a new filesystem and return success status"""
+    fs = ToyFileSystem.create(img_path, size_mb)
+    fs.close()
+    return {"status": "success", "message": f"Filesystem created at {img_path}"}
+
+
+def open_filesystem(img_path):
+    """Open an existing filesystem"""
+    fs = ToyFileSystem.open(img_path)
+    return fs
+
+
+def execute_command(fs, command, args=None):
+    """Execute a command on the filesystem and return result as dict"""
+    if args is None:
+        args = []
+    
+    if command == "help":
+        return {
+            "commands": {
+                "ls": "List directory",
+                "tree": "Show directory tree",
+                "mkdir": "Create directory",
+                "touch": "Create empty file",
+                "write": "Write text to file",
+                "read": "Read file content",
+                "rm": "Delete file",
+                "info": "Show file info",
+                "stats": "Show filesystem statistics"
+            }
+        }
+    
+    elif command == "ls":
+        path = args[0] if len(args) > 0 else "/"
+        entries = fs.list_directory(path)
+        return {"path": path, "entries": entries}
+    
+    elif command == "tree":
+        path = args[0] if len(args) > 0 else "/"
+        tree_lines = fs.tree(path)
+        return {"path": path, "tree": tree_lines}
+    
+    elif command == "mkdir":
+        if len(args) < 1:
+            return {"error": "Usage: mkdir <path>"}
+        fs.create_directory(args[0])
+        return {"status": "success", "message": f"Created directory: {args[0]}"}
+    
+    elif command == "touch":
+        if len(args) < 1:
+            return {"error": "Usage: touch <path>"}
+        fs.create_file(args[0])
+        return {"status": "success", "message": f"Created file: {args[0]}"}
+    
+    elif command == "write":
+        if len(args) < 2:
+            return {"error": "Usage: write <path> <text>"}
+        fs.write_file(args[0], args[1].encode('utf-8'))
+        return {"status": "success", "message": f"Wrote to file: {args[0]}"}
+    
+    elif command == "read":
+        if len(args) < 1:
+            return {"error": "Usage: read <path>"}
+        data = fs.read_file(args[0])
+        text = data.decode('utf-8', errors='replace')
+        return {"path": args[0], "content": text}
+    
+    elif command == "rm":
+        if len(args) < 1:
+            return {"error": "Usage: rm <path>"}
+        fs.delete_file(args[0])
+        return {"status": "success", "message": f"Deleted: {args[0]}"}
+    
+    elif command == "info":
+        if len(args) < 1:
+            return {"error": "Usage: info <path>"}
+        info = fs.get_file_info(args[0])
+        if info:
+            type_name = "REGULAR" if info.file_type == FileType.REGULAR else "DIRECTORY"
+            return {
+                "path": args[0],
+                "type": type_name,
+                "size": info.size,
+                "created": info.created,
+                "modified": info.modified,
+                "accessed": info.accessed
+            }
+        return {"error": f"File not found: {args[0]}"}
+    
+    elif command == "stats":
+        stats = fs.get_stats()
+        return {
+            "total_blocks": stats.total_blocks,
+            "free_blocks": stats.free_blocks,
+            "used_blocks": stats.total_blocks - stats.free_blocks,
+            "total_inodes": stats.total_inodes,
+            "used_inodes": stats.used_inodes,
+            "free_inodes": stats.total_inodes - stats.used_inodes
+        }
+    
+    else:
+        return {"error": f"Unknown command: {command}"}
 
 #if __name__ == "__main__":
 #    shell()

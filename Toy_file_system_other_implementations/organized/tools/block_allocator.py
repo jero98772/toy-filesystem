@@ -1,7 +1,7 @@
+#!/usr/bin/env python3
 """
 Block Allocator - Bitmap-based free block management
 """
-
 
 class BlockAllocator:
     """Manages free block allocation using a bitmap"""
